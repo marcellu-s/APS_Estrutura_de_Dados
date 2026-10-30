@@ -6,12 +6,21 @@ import random
 import tkinter as tk
 import pandas as pd
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import messagebox
+
+
+
+
 
 df = pd.read_excel("./data/deter-amz-daily-11-10-2026-00_48_24.xlsx")
 
 data = df["areaMunKm"].tolist()
 
-inverse_data = data[::-1]
+inverse_data = sorted(data, reverse=True)
 
 random_data = random.sample(data, len(data))
 
@@ -27,7 +36,7 @@ class SortingAlgorithmMixin:
     
                     dados[j], dados[j + 1] = dados[j + 1], dados[j]
 
-        return data
+        return dados
 
 
     def selection_sort(self, data):
@@ -200,6 +209,21 @@ class NamelessApp(SortingAlgorithmMixin):
         )
         
         self.btn_start.pack(pady=20)
+                # Botão para visualizar gráficos
+        self.btn_grafico = tk.Button(
+            self.sub_container_left,
+            text="Visualizar gráficos",
+            font=("Segoe UI", 11, "bold"),
+            bg="#2563EB",
+            fg="white",
+            activebackground="#1D4ED8",
+            activeforeground="white",
+            command=self.mostrar_graficos,
+            state="disabled"
+        )
+
+        self.btn_grafico.pack(pady=10)
+
 
         # Container do lado direito
         self.container_right = tk.Frame(self.root, bg="#2a2e30") # Cor ligeiramente diferente para destacar
@@ -271,6 +295,13 @@ class NamelessApp(SortingAlgorithmMixin):
         # Bloqueia botão para evitar múltiplos cliques
         self.btn_start.config(state="disabled")
 
+        # Bloqueia o botão de gráficos
+        self.btn_grafico.config(state="disabled")
+
+    # Limpa os resultados anteriores
+        self.records = {}
+
+
         # Inicia a thread que executará a fila/sequência de algoritmos
         threading.Thread(target=self.run_all_algorithms_in_sequence, daemon=True).start()
 
@@ -291,7 +322,7 @@ class NamelessApp(SortingAlgorithmMixin):
                     tempo_val = b["Tempo"]["Dados aleatórios"]
                     lbl_aleatorios = tk.Label(
                         self.frame_ranking_aleatorios,
-                        text=f"{a} - {tempo_val}",
+                        text=f"{a} - {tempo_val:.4f}s",
                         font=("Segoe UI", 12),
                         fg=self.text_color,
                         bg="#2a2e30"
@@ -315,7 +346,7 @@ class NamelessApp(SortingAlgorithmMixin):
                     tempo_val = b["Tempo"]["Dados inversos"]
                     lbl_inversos = tk.Label(
                         self.frame_ranking_inversos,
-                        text=f"{a} - {tempo_val}",
+                        text=f"{a} - {tempo_val:.4f}s",
                         font=("Segoe UI", 12),
                         fg=self.text_color,
                         bg="#2a2e30"
@@ -323,7 +354,7 @@ class NamelessApp(SortingAlgorithmMixin):
                     lbl_inversos.pack(pady=4)
                     self.labels_inversos.append(lbl_inversos)
 
-        self.root.update()
+        
 
     # --- GERENCIADOR DA SEQUÊNCIA (RODA EM THREAD DE BACKGROUND) ---
     def run_all_algorithms_in_sequence(self):
@@ -367,10 +398,11 @@ class NamelessApp(SortingAlgorithmMixin):
 
                 # Adiciona o tempo do tipo de dado executado
                 self.records[algorithm_name]["Tempo"].update({
-                    f"{type}": tempo_final  
+                    f"{type}": final_elapsed  
                 })
 
-                self.add_ranking_label(algorithm_name)
+                self.root.after( 0, lambda name=algorithm_name: self.add_ranking_label(name)
+)
                             
                 time.sleep(1.5)  # Intervalo de pausa entre algoritmos
 
@@ -378,6 +410,168 @@ class NamelessApp(SortingAlgorithmMixin):
         self.root.after(0, lambda: self.lbl_timer.config(text="00:00:00"))
         self.root.after(0, lambda: self.lbl_sorting_algorithm_name.config(text="Todos os algoritmos foram executados!"))
         self.root.after(0, lambda: self.btn_start.config(state="normal"))
+        self.root.after(0, lambda: self.btn_grafico.config(state="normal")
+)
+
+
+    def mostrar_graficos(self):
+
+        # Nomes dos algoritmos
+        algoritmos = list(self.records.keys())
+
+        # Tempos de cada simulação
+        tempos_aleatorios = []
+        tempos_inversos = []
+
+        for algoritmo in algoritmos:
+
+            tempos = self.records[algoritmo]["Tempo"]
+
+            tempos_aleatorios.append(
+                tempos["Dados aleatórios"]
+            )
+
+            tempos_inversos.append(
+                tempos["Dados inversos"]
+            )
+
+        # Criar uma nova janela
+        janela = tk.Toplevel(self.root)
+
+        janela.title("Gráficos - APS Estrutura de Dados")
+        janela.geometry("1100x650")
+        janela.configure(bg="#222526")
+
+        # Criar o gráfico
+        fig, ax = plt.subplots(figsize=(11, 6))
+
+        fig.patch.set_facecolor("#222526")
+        ax.set_facecolor("#2a2e30")
+
+        # Posições das barras
+        x = np.arange(len(algoritmos))
+        largura = 0.35
+
+        # Barras dos dados aleatórios
+        ax.bar(
+            x - largura / 2,
+            tempos_aleatorios,
+            largura,
+            label="Dados aleatórios",
+            color="#3B82F6"
+        )
+
+        # Barras dos dados inversos
+        ax.bar(
+            x + largura / 2,
+            tempos_inversos,
+            largura,
+            label="Dados inversos",
+            color="#F97316"
+        )
+
+        # Título e legendas
+        ax.set_title(
+            "Comparação dos Algoritmos de Ordenação",
+            fontsize=16,
+            color="white",
+            pad=20
+        )
+
+        ax.set_xlabel(
+            "Algoritmos",
+            color="white",
+            fontsize=12
+        )
+
+        ax.set_ylabel(
+            "Tempo de execução (segundos)",
+            color="white",
+            fontsize=12
+        )
+
+        # Nomes no eixo X
+        ax.set_xticks(x)
+
+        ax.set_xticklabels(
+            algoritmos,
+            rotation=15,
+            ha="right",
+            color="white"
+        )
+
+        # Estilo
+        ax.tick_params(axis="y", colors="white")
+
+        ax.grid(
+            axis="y",
+            linestyle="--",
+            alpha=0.2
+        )
+
+        ax.set_axisbelow(True)
+
+        ax.legend(
+            facecolor="#2a2e30",
+            labelcolor="white"
+        )
+
+        for spine in ax.spines.values():
+            spine.set_color("#555555")
+
+        fig.tight_layout()
+
+        # Colocar o gráfico na janela Tkinter
+        canvas = FigureCanvasTkAgg(
+            fig,
+            master=janela
+        )
+
+        canvas.draw()
+
+        canvas.get_tk_widget().pack(
+            fill=tk.BOTH,
+            expand=True,
+            padx=15,
+            pady=15
+        )
+
+        # Salvar o gráfico como PNG
+        def salvar_grafico():
+
+            fig.savefig(
+                "grafico_comparativo.png",
+                dpi=300,
+                bbox_inches="tight",
+                facecolor=fig.get_facecolor()
+            )
+
+            messagebox.showinfo(
+                "Gráfico salvo",
+                "Gráfico salvo como grafico_comparativo.png!"
+            )
+
+        # Botão para salvar imagem
+        btn_salvar = tk.Button(
+            janela,
+            text="Salvar gráfico em PNG",
+            font=("Segoe UI", 11, "bold"),
+            bg="#16A34A",
+            fg="white",
+            command=salvar_grafico
+        )
+
+        btn_salvar.pack(pady=10)
+
+        # Liberar recursos ao fechar
+        def fechar_janela():
+            plt.close(fig)
+            janela.destroy()
+
+        janela.protocol("WM_DELETE_WINDOW", fechar_janela)
+
+
+
 
 # Inicialização da janela principal
 if __name__ == "__main__":

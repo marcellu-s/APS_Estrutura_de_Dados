@@ -12,10 +12,6 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import messagebox
 
-
-
-
-
 df = pd.read_excel("./data/deter-amz-daily-11-10-2026-00_48_24.xlsx")
 
 data = df["areaMunKm"].tolist()
@@ -27,115 +23,89 @@ random_data = random.sample(data, len(data))
 class SortingAlgorithmMixin:
     def bubble_sort(self, data):
         dados = data.copy()
-
-        for i in range(len(dados) - 1):
-    
-            for j in range(len(dados) - 1 - i):
-    
+        n = len(dados)
+        
+        for i in range(n - 1):
+            trocou = False
+            for j in range(n - 1 - i):
                 if dados[j] > dados[j + 1]:
-    
                     dados[j], dados[j + 1] = dados[j + 1], dados[j]
-
+                    trocou = True
+            # Otimização: se nenhuma troca ocorreu, a lista já está ordenada
+            if not trocou:
+                break
+                
         return dados
-
 
     def selection_sort(self, data):
         dados = data.copy()
+        n = len(dados)
         
-        for i in range(len(dados) - 1):
-    
+        for i in range(n - 1):
             menor = i
-    
-            for j in range(i + 1, len(dados)):
-    
+            for j in range(i + 1, n):
                 if dados[j] < dados[menor]:
                     menor = j
-    
-            dados[i], dados[menor] = dados[menor], dados[i]
-
+            # Evita troca desnecessária caso o menor já seja o elemento atual
+            if menor != i:
+                dados[i], dados[menor] = dados[menor], dados[i]
+                
         return dados
 
-    def inserction_sort(self, data):
+    def insertion_sort(self, data):
         dados = data.copy()
         
         for i in range(1, len(dados)):
-    
             atual = dados[i]
-    
             j = i - 1
-    
+            
             while j >= 0 and dados[j] > atual:
-    
                 dados[j + 1] = dados[j]
-    
                 j -= 1
-    
+                
             dados[j + 1] = atual
-
+            
         return dados
 
     def merge_sort(self, data):
         if len(data) <= 1:
             return data.copy()
-    
+
         meio = len(data) // 2
-    
         esquerda = self.merge_sort(data[:meio])
         direita = self.merge_sort(data[meio:])
-    
+
         resultado = []
-    
-        i = 0
-        j = 0
-    
+        i = j = 0
+
+        # Mescla as duas sub-listas de forma ordenada
         while i < len(esquerda) and j < len(direita):
-    
             if esquerda[i] <= direita[j]:
-    
                 resultado.append(esquerda[i])
-    
                 i += 1
-    
             else:
-    
                 resultado.append(direita[j])
-    
                 j += 1
-    
+
+        # Adiciona os elementos restantes (se houver)
         resultado.extend(esquerda[i:])
         resultado.extend(direita[j:])
 
         return resultado
 
-    def quick_sort(self, data): 
+    def quick_sort(self, data):
         if len(data) <= 1:
             return data.copy()
-    
-        pivo = data[len(data) // 2]
-    
-        menores = []
-        iguais = []
-        maiores = []
-    
-        for registro in data:
-    
-            if registro < pivo:
-    
-                menores.append(registro)
-    
-            elif registro > pivo:
-    
-                maiores.append(registro)
-    
-            else:
-    
-                iguais.append(registro)
 
-        return (
-            self.quick_sort(menores)
-            + iguais
-            + self.quick_sort(maiores)
-        )
+        # Escolha do pivô (elemento do meio)
+        pivo = data[len(data) // 2]
+        
+        # Uso de list comprehensions para maior performance e legibilidade em Python
+        menores = [x for x in data if x < pivo]
+        iguais = [x for x in data if x == pivo]
+        maiores = [x for x in data if x > pivo]
+
+        return self.quick_sort(menores) + iguais + self.quick_sort(maiores)
 
 class NamelessApp(SortingAlgorithmMixin):
     def __init__(self, root):
@@ -569,9 +539,6 @@ class NamelessApp(SortingAlgorithmMixin):
             janela.destroy()
 
         janela.protocol("WM_DELETE_WINDOW", fechar_janela)
-
-
-
 
 # Inicialização da janela principal
 if __name__ == "__main__":
